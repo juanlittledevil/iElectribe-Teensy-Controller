@@ -1,7 +1,7 @@
 #  iElectribe Controller setup for custom Teensy midi controller.
 
 ### Author: Juan Segovia
-### Contact: www.juanlittledevil.com (juanlittledebil at gmail.com)
+### Contact: www.juanlittledevil.com (juanlittledevil at gmail.com)
 ### Creative Commons: NC (Non-Commercial)
 ### https://wiki.creativecommons.org/wiki/4.0/NonCommercial
 
