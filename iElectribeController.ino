@@ -42,9 +42,9 @@
 #include <SmoothAnalogInput.h>
 
 
-/*
- * Variables
- */
+// =======================================================================================
+// Variables
+// =======================================================================================
 
 // We have a 4 x 4 matrix of buttons.
 const int channel = 10;
@@ -102,7 +102,7 @@ int knob_pins[max_knobs] = {38, 39, 40, 41, 42, 43, 44, 45};
 int knob_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};
 int knob_prev_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-SmoothAnalogInput knobs[max_knobs];
+SmoothAnalogInput knobs[max_knobs]; 
 
 int part_midi_map[8][13] = {
   {15, 17, 20, 21, 0, 18, 22, 23, 16, 19, 24, 26, 27},  // part 1
@@ -138,9 +138,10 @@ int part_mute[8][2] = {
 };
 
 
-/*
- * Methods
- */
+// =======================================================================================
+// Methods
+// =======================================================================================
+// init as it states gets ran from setup()
 void init_hardware() {
   for ( int i=0; i < matrix_size; i++ ) {
     pinMode(push_button_pin[i], INPUT_PULLUP);
@@ -156,6 +157,8 @@ void init_hardware() {
   }
 }
 
+
+// Flashy splash sequence at boot time.
 void boot_sequence() {
   for (int i=0; i < matrix_size; i++ ) {
     digitalWrite(led[i], HIGH);
@@ -165,6 +168,9 @@ void boot_sequence() {
   }
 }
 
+
+// Button states - this method gets ran from loop()
+// This is is how we get the state of the buttons and do stuff.
 void update_button_states() {
   for ( int i=0; i < matrix_size; i++ ) {
     if (push_button[i].update()) {
@@ -189,6 +195,8 @@ void update_button_states() {
   }
 }
 
+
+// These are the top two rows of buttons. Each part as a bank of 8.
 void process_part_buttons(int i) {
   if ( i == 0 ) {
     // Motion
@@ -254,6 +262,9 @@ void process_part_buttons(int i) {
   }
 }
 
+
+// The part number is just the key in a hash or the first layer of the multi array.
+// All else depends on which one you are working on.
 void select_part(int i) {
   if (stick_direction == 2) {
     part_selection = i;
@@ -261,6 +272,9 @@ void select_part(int i) {
 }
 
 
+
+// This is what happens when we push the buttons. Note that depending on the mode or
+// direction of the joy stick, the button does different things.
 void play_notes(int i, int note, boolean on) {
   // == PART NOTES ==
   if (on == HIGH and stick_direction == 0) {
@@ -270,6 +284,7 @@ void play_notes(int i, int note, boolean on) {
     //Serial.print("OFF");
     usbMIDI.sendNoteOff(note, 0, channel);
   }
+  
   // == PART MUTES ==
   if (on == HIGH and stick_direction == 4) {
     //Serial.print("ON");
@@ -282,10 +297,10 @@ void play_notes(int i, int note, boolean on) {
     }
     usbMIDI.sendControlChange(part_mute[i][0], part_mute[i][1], channel); 
   } 
-  //print_debug(note, val);
 }
 
 
+// Update Stick - Ran from loop().
 void update_stick_states() {
   for ( int i=0; i < max_stick; i++ ) {
     if (stick[i].update()) {
@@ -299,10 +314,11 @@ void update_stick_states() {
 }
 
 
+// Which direction is the Joystick pressed?
 void detect_direction(int i, boolean on) {
   if (on == HIGH) {
+  
     if (i == 0) {
-      // Right
       stick_direction = 1;
       part_midi_map[part_selection][4] = 10;
     } else if (i == 1) {
@@ -320,11 +336,11 @@ void detect_direction(int i, boolean on) {
     // Center
     stick_direction = 0;
   }
-  
-  print_debug(stick_pins[i], stick_direction);
+  // print_debug(stick_pins[i], stick_direction);
 }
 
 
+// Turn on leds, or off depending on our state matrix.
 void update_leds() {
   for (int i=0; i < matrix_size; i++ ) {
     if ((i - 8) == part_selection) {
@@ -337,6 +353,8 @@ void update_leds() {
   }
 }
 
+
+// Knob states...
 void update_knob_states() {
   for (int i=0; i < max_knobs; i++ ) {
     knob_state[i] = map(knobs[i].read(), 0, 1024, 0, 128);
@@ -349,6 +367,8 @@ void update_knob_states() {
   }
 }
 
+
+// Tool for debugging output into serial console.
 void print_debug(int i, int val) {
   Serial.print(" ");
   Serial.print(i);
@@ -358,12 +378,20 @@ void print_debug(int i, int val) {
   Serial.println("");
 }
 
+
+// =======================================================================================
+// Setup
+// =======================================================================================
 void setup() {
   Serial.begin(9600);
   init_hardware();
   boot_sequence();
 }
 
+
+// =======================================================================================
+// The loop()
+// =======================================================================================
 void loop() {
   update_button_states();
   update_stick_states();
