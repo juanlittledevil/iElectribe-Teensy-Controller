@@ -54,6 +54,9 @@ const byte max_knobs = 8;
 const int max_stick = 4;
 int part_selection = 0;
 int effect_type_state = 0;
+int play_state = 0;
+int rec_state = 4;
+int loop_state = 2;
 
 // The pad parts of the iElectribe map to the bottom 8 buttons.
 int play_note[] = {36, 38, 40, 41, 42, 46, 49, 39};
@@ -179,20 +182,80 @@ void boot_sequence() {
 void update_button_states() {
   for ( int i=0; i < matrix_size; i++ ) {
     if (push_button[i].update()) {
+      // LOW is means the button has been pressed.
       if (push_button[i].read() == LOW) {
-        // Notes only played on bottom 2 rows
-        if ( i < 8 ) {
-          play_notes(i, play_note[i], HIGH);
-        } else if ( i >= 8 ) {
+        
+        //   -- Center --
+        if ( stick_direction == 0 && i >= 8 ) {
           process_part_buttons(i - 8);
-          select_part(i - 8);
         }
+        
+        if ( stick_direction == 0 && i < 8 ) {
+          // Send note on --
+          play_notes(play_note[i], HIGH);
+        } 
+        
+        //   -- Right --
+        // Update the last step value cc 6 value.
+        if ( stick_direction == 1 ) {
+          usbMIDI.sendControlChange(5, i + 1, channel);
+        }
+        
+        //   --  UP --
+        if ( stick_direction == 2 && i < 8 ) {
+          part_mutes(i, HIGH); 
+        }
+        if (stick_direction == 2 && i >= 8) {
+          part_selection = i - 8;
+        }
+        
+        //   --  Left --
+				// Update the loop length with the 4 bottom buttons.
+        if ( stick_direction == 3 && i < 4 ) {
+          usbMIDI.sendControlChange(6, i + 1, channel);
+        }
+        
+        //   -- Down --
+        // Mute the parts
+        if ( stick_direction == 4 ) {
+          if ( i == 0 ) {
+            if (rec_state == 4) {
+               rec_state = 5;
+            } else {
+               rec_state = 4;
+            }
+//           	usbMIDI.sendControlChange(7, rec_state, channel);
+          }
+          
+//           if ( i == 1 ) {
+//             if (play_state == 0) {
+//                play_state = 1;
+//             } else {
+//                play_state = 0;
+//             }
+//           	usbMIDI.sendControlChange(7, play_state, channel);
+//           }
+//           
+//           if ( i == 3 ) {
+//             if (loop_state == 2) {
+//                loop_state = 3;
+//             } else {
+//                loop_state = 2;
+//             }
+//           	usbMIDI.sendControlChange(7, loop_state, channel);
+//           } 
+        }
+
+        
         // Light when the button is pressed
         is_lit[i] = HIGH;
+        
+      // HIGH (else) means the button has been released.
       } else {
         // Notes only played on bottom 2 rows
         if ( i < 8 ) {
-          play_notes(i, play_note[i], LOW);
+          // Send note off --
+          play_notes(play_note[i], LOW);
         }
         is_lit[i] = LOW;
       }
@@ -214,6 +277,9 @@ void send_cc_when_pressed(int button_number, int max_value) {
     part_midi_state[part_selection][button_number]++;
   }
   usbMIDI.sendControlChange(part_midi_map[part_selection][button_number], part_midi_state[part_selection][button_number], channel);
+  
+//   Serial.print("When cc pressed");
+//   print_debug(part_midi_map[part_selection][button_number], part_midi_state[part_selection][button_number]);
 }
 
 
@@ -230,6 +296,7 @@ void process_part_buttons(int i) {
   } else if ( i == 2 ) {
     // FX Edit1
     part_midi_map[part_selection][4] = 13;
+
 
   } else if ( i == 3 ) {
     // FX Edit1
@@ -259,30 +326,23 @@ void process_part_buttons(int i) {
 }
 
 
-// The part number is just the key in a hash or the first layer of the multi array.
-// All else depends on which one you are working on.
-void select_part(int i) {
-  if (stick_direction == 2) {
-    part_selection = i;
+// This is what happens when we push the buttons. Note that depending on the mode or
+// direction of the joy stick, the button does different things.
+void play_notes(int note, boolean on) {
+  // == PART NOTES ==
+  if (on == HIGH) {
+    //Serial.print("ON");
+    usbMIDI.sendNoteOn(note, 99, channel);   
+  } else if (on == LOW) {
+    //Serial.print("OFF");
+    usbMIDI.sendNoteOff(note, 0, channel);
   }
 }
 
 
-
-// This is what happens when we push the buttons. Note that depending on the mode or
-// direction of the joy stick, the button does different things.
-void play_notes(int i, int note, boolean on) {
-  // == PART NOTES ==
-  if (on == HIGH and stick_direction == 0) {
-    //Serial.print("ON");
-    usbMIDI.sendNoteOn(note, 99, channel);   
-  } else if (on == LOW and stick_direction == 0) {
-    //Serial.print("OFF");
-    usbMIDI.sendNoteOff(note, 0, channel);
-  }
-  
+void part_mutes(int i, boolean on) {  
   // == PART MUTES ==
-  if (on == HIGH and stick_direction == 4) {
+  if (on == HIGH) {
     //Serial.print("ON");
     if ( part_mute[i][1] == 0 ) {
        part_mute[i][1] = 1;
@@ -320,6 +380,7 @@ void detect_direction(int i, boolean on) {
     } else if (i == 1) {
       // Down
       stick_direction = 2;
+      part_midi_map[part_selection][4] = 7;
     } else if (i == 2) {
       // Left
       stick_direction = 3;
@@ -332,7 +393,8 @@ void detect_direction(int i, boolean on) {
     // Center
     stick_direction = 0;
   }
-  // print_debug(stick_pins[i], stick_direction);
+// 	Serial.print("detect_direction");
+// 	print_debug(stick_pins[i], stick_direction);
 }
 
 
