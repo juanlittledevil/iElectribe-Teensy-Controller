@@ -67,6 +67,7 @@ int push_button_pin[matrix_size] = {
   12, 13, 14, 15
 };
 
+// Array of button objects with debounce.
 Bounce push_button[] = {
   Bounce(0, bounce_delay), Bounce(1, bounce_delay), Bounce(2, bounce_delay), Bounce(3, bounce_delay),
   Bounce(4, bounce_delay), Bounce(5, bounce_delay), Bounce(6, bounce_delay), Bounce(7, bounce_delay),
@@ -74,7 +75,7 @@ Bounce push_button[] = {
   Bounce(12, bounce_delay), Bounce(13, bounce_delay), Bounce(14, bounce_delay), Bounce(15, bounce_delay)
 };
 
-// LEDs 
+// LED pins
 int led[matrix_size] = {
   20, 21, 22, 23,
   24, 25, 26, 27,
@@ -82,6 +83,7 @@ int led[matrix_size] = {
   32, 33, 34, 35
 };
 
+// holds the current state of the led matrix.
 boolean is_lit[matrix_size] = {
   LOW, LOW, LOW, LOW,
   LOW, LOW, LOW, LOW,
@@ -97,13 +99,14 @@ Bounce stick[] = {
 };
 
 
-// knobs
-int knob_pins[max_knobs] = {38, 39, 40, 41, 42, 43, 44, 45};
-int knob_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};
-int knob_prev_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};
+// knobs  
+int knob_pins[max_knobs] = {38, 39, 40, 41, 42, 43, 44, 45};	// teensy pin values
+int knob_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};			// initialize the knob states
+int knob_prev_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};		// used to compare updates with previous state. Did it change?
 
-SmoothAnalogInput knobs[max_knobs]; 
+SmoothAnalogInput knobs[max_knobs]; 		// create array of SmoothAnalogInput objects.
 
+//            [part][cc_number]
 int part_midi_map[8][13] = {
   {15, 17, 20, 21, 0, 18, 22, 23, 16, 19, 24, 26, 27},  // part 1
   {28, 30, 34, 35, 0, 31, 36, 37, 29, 33, 38, 40, 41},  // part 2
@@ -115,6 +118,7 @@ int part_midi_map[8][13] = {
   {107, 109, 112, 113, 0, 110, 114, 115, 108, 111, 116, 118, 119},  // part 8
 };
 
+//              [part][cc_value]
 int part_midi_state[8][13] = {
   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -126,6 +130,7 @@ int part_midi_state[8][13] = {
   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 
+//        [part][state]
 int part_mute[8][2] = {
   {25, 1},
   {39, 1},
@@ -196,25 +201,31 @@ void update_button_states() {
 }
 
 
+// Send a button pressed control change.
+void send_cc_when_pressed(int button_number, int max_value) {
+/* input: button_number which translates to the key which holds the current cc value.
+ * input: max_value the button will send a cc message 1 value higher each time it is pressed.
+ *        when the max_value is reached the cc message will be set to 0 and the cycle will repeat.
+ *
+ */
+  if ( part_midi_state[part_selection][button_number] == max_value ) {
+    part_midi_state[part_selection][button_number] = 0;
+  } else {
+    part_midi_state[part_selection][button_number]++;
+  }
+  usbMIDI.sendControlChange(part_midi_map[part_selection][button_number], part_midi_state[part_selection][button_number], channel);
+}
+
+
 // These are the top two rows of buttons. Each part as a bank of 8.
 void process_part_buttons(int i) {
   if ( i == 0 ) {
     // Motion
-    if ( part_midi_state[part_selection][10] == 2 ) {
-      part_midi_state[part_selection][10] = 0;
-    } else {
-      part_midi_state[part_selection][10]++;
-    }
-    usbMIDI.sendControlChange(part_midi_map[part_selection][10], part_midi_state[part_selection][10], channel);
+    send_cc_when_pressed(10, 2);
 
   } else if ( i == 1 ) {
     // Accent
-    if ( part_midi_state[part_selection][12] == 1 ) {
-      part_midi_state[part_selection][12] = 0;
-    } else {
-      part_midi_state[part_selection][12]++;
-    }
-    usbMIDI.sendControlChange(part_midi_map[part_selection][12], part_midi_state[part_selection][12], channel);
+    send_cc_when_pressed(12, 1);
       
   } else if ( i == 2 ) {
     // FX Edit1
@@ -226,21 +237,11 @@ void process_part_buttons(int i) {
   
   } else if ( i == 4 ) {
     // Waveform
-    if ( part_midi_state[part_selection][8] == 3 ) {
-      part_midi_state[part_selection][8] = 0;
-    } else {
-      part_midi_state[part_selection][8]++;
-    }
-    usbMIDI.sendControlChange(part_midi_map[part_selection][8], part_midi_state[part_selection][8], channel);
+    send_cc_when_pressed(8, 3);
 
   } else if ( i == 5 ) {
     // Mod Type
-    if ( part_midi_state[part_selection][9] == 5 ) {
-      part_midi_state[part_selection][9] = 0;
-    } else {
-      part_midi_state[part_selection][9]++;
-    }
-    usbMIDI.sendControlChange(part_midi_map[part_selection][9], part_midi_state[part_selection][9], channel);
+    send_cc_when_pressed(9, 5);
 
   } else if ( i == 6 ) {
     // Effect Type
@@ -253,12 +254,7 @@ void process_part_buttons(int i) {
 
   } else if ( i == 7 ) {
     // Effect
-    if ( part_midi_state[part_selection][11] == 1 ) {
-      part_midi_state[part_selection][11] = 0;
-    } else {
-      part_midi_state[part_selection][11]++;
-    }
-    usbMIDI.sendControlChange(part_midi_map[part_selection][11], part_midi_state[part_selection][11], channel);
+    send_cc_when_pressed(11, 1);
   }
 }
 
