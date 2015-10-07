@@ -46,6 +46,8 @@
 // Variables
 // =======================================================================================
 
+bool debug = false;
+
 // We have a 4 x 4 matrix of buttons.
 const int channel = 10;
 const int matrix_size = 16;
@@ -103,11 +105,11 @@ Bounce stick[] = {
 
 
 // knobs  
-int knob_pins[max_knobs] = {38, 39, 40, 41, 42, 43, 44, 45};	// teensy pin values
-int knob_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};			// initialize the knob states
-int knob_prev_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};		// used to compare updates with previous state. Did it change?
+int knob_pins[max_knobs] = {38, 39, 40, 41, 42, 43, 44, 45};    // teensy pin values
+int knob_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};           // initialize the knob states
+int knob_prev_state[max_knobs] = {0, 0, 0, 0, 0, 0, 0, 0};      // used to compare updates with previous state. Did it change?
 
-SmoothAnalogInput knobs[max_knobs]; 		// create array of SmoothAnalogInput objects.
+SmoothAnalogInput knobs[max_knobs];                             // create array of SmoothAnalogInput objects.
 
 //            [part][cc_number]
 int part_midi_map[8][13] = {
@@ -210,7 +212,7 @@ void update_button_states() {
         }
         
         //   --  Left --
-				// Update the loop length with the 4 bottom buttons.
+        // Update the loop length with the 4 bottom buttons.
         if ( stick_direction == 3 && i < 4 ) {
           usbMIDI.sendControlChange(6, i + 1, channel);
         }
@@ -224,7 +226,7 @@ void update_button_states() {
             } else {
                rec_state = 4;
             }
-//           	usbMIDI.sendControlChange(7, rec_state, channel);
+//            usbMIDI.sendControlChange(7, rec_state, channel);
           }
           
 //           if ( i == 1 ) {
@@ -233,17 +235,17 @@ void update_button_states() {
 //             } else {
 //                play_state = 0;
 //             }
-//           	usbMIDI.sendControlChange(7, play_state, channel);
+//             usbMIDI.sendControlChange(7, play_state, channel);
 //           }
-//           
+//
 //           if ( i == 3 ) {
 //             if (loop_state == 2) {
 //                loop_state = 3;
 //             } else {
 //                loop_state = 2;
 //             }
-//           	usbMIDI.sendControlChange(7, loop_state, channel);
-//           } 
+//             usbMIDI.sendControlChange(7, loop_state, channel);
+//           }
         }
 
         
@@ -277,9 +279,10 @@ void send_cc_when_pressed(int button_number, int max_value) {
     part_midi_state[part_selection][button_number]++;
   }
   usbMIDI.sendControlChange(part_midi_map[part_selection][button_number], part_midi_state[part_selection][button_number], channel);
-  
-//   Serial.print("When cc pressed");
-//   print_debug(part_midi_map[part_selection][button_number], part_midi_state[part_selection][button_number]);
+
+  if (debug == true) {
+    print_debug(part_midi_map[part_selection][button_number], part_midi_state[part_selection][button_number], 'send_cc_when_pressed'');
+  }
 }
 
 
@@ -393,8 +396,9 @@ void detect_direction(int i, boolean on) {
     // Center
     stick_direction = 0;
   }
-// 	Serial.print("detect_direction");
-// 	print_debug(stick_pins[i], stick_direction);
+  if (debug == true) {
+    print_debug(stick_pins[i], stick_direction, 'detect_direction()');
+  }
 }
 
 
@@ -419,7 +423,10 @@ void update_knob_states() {
     if ( knob_state[i] != knob_prev_state[i] ) {
       part_midi_state[part_selection][i] = knob_state[i];
       usbMIDI.sendControlChange(part_midi_map[part_selection][i], part_midi_state[part_selection][i], channel);
-      //print_debug(part_midi_map[part_selection][i], part_midi_state[part_selection][i]);
+
+      if (debug == true) {
+        print_debug(part_midi_map[part_selection][i], part_midi_state[part_selection][i], 'update_knob_states()');
+      }
     }
     knob_prev_state[i] = knob_state[i];
   }
@@ -427,12 +434,14 @@ void update_knob_states() {
 
 
 // Tool for debugging output into serial console.
-void print_debug(int i, int val) {
-  Serial.print(" ");
-  Serial.print(i);
-  Serial.print(": ");
-  Serial.print(val);
-  Serial.print(", ");  
+void print_debug(int arg1, int arg2, char comment[]) {
+  for (int i=0; i < sizeof(comment) - 1; i++) {
+    Serial.print(comment[i]);
+  }
+  Serial.print(" [");
+  Serial.print(arg1);
+  Serial.print("]: ");
+  Serial.print(arg2);
   Serial.println("");
 }
 
