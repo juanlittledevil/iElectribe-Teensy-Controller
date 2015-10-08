@@ -233,6 +233,13 @@ void update_button_states() {
             print_debug(6, i + 1);
           }
         }
+        if ( stick_direction == 3 && i >= 4 ) {
+          usbMIDI.sendControlChange(8, i - 4, channel );
+          if (debug == true) {
+            Serial.print("update_button_states(cc, pattern)");
+            print_debug(8, i - 4);
+          }
+        }
         
         //   -- Down --
         // Mute the parts
@@ -275,10 +282,13 @@ void update_button_states() {
           }
 
           if ( i == 2 ) {
-            part_midi_map[part_selection][4] = 7;
+            // Pattern Set Select
+            part_midi_map[part_selection][4] = 8;
+            swing_on = false;
+            pattern_map = true;
             if (debug == true) {
-              Serial.print("update_button_states(cc, play_state)");
-              print_debug(7, play_state);
+              Serial.print("process_part_buttons(cc, partern)");
+              print_debug(part_midi_map[part_selection][4], part_midi_state[part_selection][4]);
             }
           }
 
@@ -298,7 +308,7 @@ void update_button_states() {
           if ( i == 4 ) {
             part_midi_map[part_selection][4] = 1;
             if (debug == true) {
-              Serial.print("update_button_states(cc, value)");
+              Serial.print("update_button_states(cc, accent_level)");
               print_debug(1, 4);
             }
           }
@@ -311,7 +321,7 @@ void update_button_states() {
             }
             usbMIDI.sendControlChange(2, accent_state, channel);
             if (debug == true) {
-              Serial.print("update_button_states(cc, accesnt_state)");
+              Serial.print("update_button_states(cc, accent_state)");
               print_debug(2, accent_state);
             }
           }
@@ -494,6 +504,7 @@ void detect_direction(int i, boolean on) {
   if (on == HIGH) {
 
     if (i == 0) {
+      // Right
       stick_direction = 1;
       part_midi_map[part_selection][4] = 10;
       swing_on = false;
@@ -501,9 +512,6 @@ void detect_direction(int i, boolean on) {
     } else if (i == 1) {
       // Up
       stick_direction = 2;
-      part_midi_map[part_selection][4] = 7;
-      swing_on = false;
-      pattern_map = false;
     } else if (i == 2) {
       // Left
       stick_direction = 3;
@@ -513,15 +521,6 @@ void detect_direction(int i, boolean on) {
     } else if (i == 3) {
       // down
       stick_direction = 4;
-
-      // Pattern Set Select
-      part_midi_map[part_selection][4] = 8;
-      swing_on = false;
-      pattern_map = true;
-      if (debug == true) {
-        Serial.print("process_part_buttons(cc, partern)");
-        print_debug(part_midi_map[part_selection][4], part_midi_state[part_selection][4]);
-      }
     }
   } else {
     // Center

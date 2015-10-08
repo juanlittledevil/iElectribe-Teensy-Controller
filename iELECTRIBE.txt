@@ -41,9 +41,11 @@ TABLE1 : Control Change
 | 2   | Accent Motion Seq Type      | 0~2                             |
 | 3   | Cross Mod.                  | 0~1                             |
 | 4   | Swing                       | 50~75                           |
+| 5   | Laststep                    | 1-16                            |
+| 6   | Length                      | 1-4                             |
 | 7   | Stop/Start/Loop/Rec         | 0/1/2/3/4/5                     | 0:Stop,1:Start,2:LoopOff,3:LoopOn,4:RecOff,5:RecOn
 | 8   | PatternSet Select           | 0~63, Otherwise:ignore          |
-| 9  no | Solo                        | 0~7, Otherwise:Solo Off         |
+| 9   | Solo                        | 0~7, Otherwise:Solo Off         |
 | 10  | Tube Gain                   | 0~127                           |
 | 11  | Master Level                | 0~127                           |
 +-----+-----------------------------+---------------------------------+
