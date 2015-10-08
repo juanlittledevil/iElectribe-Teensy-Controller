@@ -46,7 +46,7 @@
 // Variables
 // =======================================================================================
 
-bool debug = false;
+bool debug = true;
 
 // We have a 4 x 4 matrix of buttons.
 const int channel = 10;
@@ -201,6 +201,10 @@ void update_button_states() {
         // Update the last step value cc 6 value.
         if ( stick_direction == 1 ) {
           usbMIDI.sendControlChange(5, i + 1, channel);
+          if (debug == true) {
+            Serial.print("update_button_states(cc, value)");
+            print_debug(5, i + 1);
+          }
         }
         
         //   --  UP --
@@ -209,12 +213,20 @@ void update_button_states() {
         }
         if (stick_direction == 2 && i >= 8) {
           part_selection = i - 8;
+          if (debug == true) {
+            Serial.print("part_selection(button, part_number)");
+            print_debug(i,i - 8);
+          }
         }
         
         //   --  Left --
         // Update the loop length with the 4 bottom buttons.
         if ( stick_direction == 3 && i < 4 ) {
           usbMIDI.sendControlChange(6, i + 1, channel);
+          if (debug == true) {
+            Serial.print("update_button_states(cc, value)");
+            print_debug(6, i + 1);
+          }
         }
         
         //   -- Down --
@@ -281,7 +293,8 @@ void send_cc_when_pressed(int button_number, int max_value) {
   usbMIDI.sendControlChange(part_midi_map[part_selection][button_number], part_midi_state[part_selection][button_number], channel);
 
   if (debug == true) {
-    print_debug(part_midi_map[part_selection][button_number], part_midi_state[part_selection][button_number], 'send_cc_when_pressed'');
+    Serial.print("send_cc_when_pressed(cc, value)");
+    print_debug(part_midi_map[part_selection][button_number], part_midi_state[part_selection][button_number]);
   }
 }
 
@@ -299,12 +312,20 @@ void process_part_buttons(int i) {
   } else if ( i == 2 ) {
     // FX Edit1
     part_midi_map[part_selection][4] = 13;
+    if (debug == true) {
+      Serial.print("process_part_buttons(cc, value)");
+      print_debug(part_midi_map[part_selection][4], part_midi_state[part_selection][4]);
+    }
 
 
   } else if ( i == 3 ) {
     // FX Edit1
     part_midi_map[part_selection][4] = 14;
-  
+    if (debug == true) {
+      Serial.print("process_part_buttons(cc, value)");
+      print_debug(part_midi_map[part_selection][4], part_midi_state[part_selection][4]);
+    }
+
   } else if ( i == 4 ) {
     // Waveform
     send_cc_when_pressed(8, 3);
@@ -321,6 +342,10 @@ void process_part_buttons(int i) {
       effect_type_state++;
     }
     usbMIDI.sendControlChange(12, effect_type_state, channel);
+    if (debug == true) {
+      Serial.print("process_part_buttons(cc, value)");
+      print_debug(12, effect_type_state);
+    }
 
   } else if ( i == 7 ) {
     // Effect
@@ -329,15 +354,16 @@ void process_part_buttons(int i) {
 }
 
 
-// This is what happens when we push the buttons. Note that depending on the mode or
-// direction of the joy stick, the button does different things.
+// This is what happens when we push the buttons.
 void play_notes(int note, boolean on) {
   // == PART NOTES ==
   if (on == HIGH) {
-    //Serial.print("ON");
-    usbMIDI.sendNoteOn(note, 99, channel);   
+    usbMIDI.sendNoteOn(note, 99, channel);
+    if (debug == true) {
+      Serial.print("play_notes(cc, value)");
+      print_debug(note, on);
+    }
   } else if (on == LOW) {
-    //Serial.print("OFF");
     usbMIDI.sendNoteOff(note, 0, channel);
   }
 }
@@ -354,8 +380,12 @@ void part_mutes(int i, boolean on) {
       part_mute[i][1] = 0;
       is_lit[i] = LOW;
     }
-    usbMIDI.sendControlChange(part_mute[i][0], part_mute[i][1], channel); 
-  } 
+    usbMIDI.sendControlChange(part_mute[i][0], part_mute[i][1], channel);
+    if (debug == true) {
+      Serial.print("part_mutes(cc, value)");
+      print_debug(part_mute[i][0], part_mute[i][1]);
+  }
+  }
 }
 
 
@@ -397,7 +427,8 @@ void detect_direction(int i, boolean on) {
     stick_direction = 0;
   }
   if (debug == true) {
-    print_debug(stick_pins[i], stick_direction, 'detect_direction()');
+    Serial.print("detect_direction(pin, direction)");
+    print_debug(stick_pins[i], stick_direction);
   }
 }
 
@@ -425,7 +456,8 @@ void update_knob_states() {
       usbMIDI.sendControlChange(part_midi_map[part_selection][i], part_midi_state[part_selection][i], channel);
 
       if (debug == true) {
-        print_debug(part_midi_map[part_selection][i], part_midi_state[part_selection][i], 'update_knob_states()');
+        Serial.print("update_knob_states(cc, value)");
+        print_debug(part_midi_map[part_selection][i], part_midi_state[part_selection][i]);
       }
     }
     knob_prev_state[i] = knob_state[i];
@@ -434,10 +466,7 @@ void update_knob_states() {
 
 
 // Tool for debugging output into serial console.
-void print_debug(int arg1, int arg2, char comment[]) {
-  for (int i=0; i < sizeof(comment) - 1; i++) {
-    Serial.print(comment[i]);
-  }
+void print_debug(int arg1, int arg2) {
   Serial.print(" [");
   Serial.print(arg1);
   Serial.print("]: ");
