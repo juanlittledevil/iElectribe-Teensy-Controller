@@ -283,7 +283,7 @@ void update_button_states() {
 
           if ( i == 2 ) {
             // Pattern Set Select
-            part_midi_map[part_selection][4] = 8;
+            part_midi_map[part_selection][4] = 6;
             swing_on = false;
             pattern_map = true;
             if (debug == true) {
@@ -557,7 +557,7 @@ void update_knob_states() {
         part_midi_state[part_selection][4] = map(knob_state[4], 0, 128, 50, 76);
       }
       if ( pattern_map == true ) {
-        part_midi_state[part_selection][4] = map(knob_state[4], 0, 128, 0, 66);
+        part_midi_state[part_selection][4] = map(knob_state[4], 0, 128, 0, 5);
       }
 
       usbMIDI.sendControlChange(part_midi_map[part_selection][i], part_midi_state[part_selection][i], channel);
