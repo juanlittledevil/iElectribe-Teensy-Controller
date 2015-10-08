@@ -54,11 +54,16 @@ const int matrix_size = 16;
 const int bounce_delay = 5; // 10ms
 const byte max_knobs = 8;
 const int max_stick = 4;
+int solo_part = 8;
 int part_selection = 0;
 int effect_type_state = 0;
 int play_state = 0;
 int rec_state = 4;
 int loop_state = 2;
+int accent_state = 0;
+int cross_state = 0;
+bool swing_on = false;
+bool pattern_map = false;
 
 // The pad parts of the iElectribe map to the bottom 8 buttons.
 int play_note[] = {36, 38, 40, 41, 42, 46, 49, 39};
@@ -211,7 +216,7 @@ void update_button_states() {
         if ( stick_direction == 2 && i < 8 ) {
           part_mutes(i, HIGH); 
         }
-        if (stick_direction == 2 && i >= 8) {
+        if ( stick_direction == 4 && i >= 8) {
           part_selection = i - 8;
           if (debug == true) {
             Serial.print("part_selection(button, part_number)");
@@ -231,6 +236,18 @@ void update_button_states() {
         
         //   -- Down --
         // Mute the parts
+        if ( i >=8 && stick_direction == 2 ) {
+          if ( solo_part >= 8 ) {
+            solo_part = i - 8;
+          } else {
+            solo_part = i;
+          }
+          usbMIDI.sendControlChange(9, solo_part, channel);
+          if (debug == true) {
+            Serial.print("update_button_states(cc, solo_part)");
+            print_debug(9, solo_part);
+          }
+        }
         if ( stick_direction == 4 ) {
           if ( i == 0 ) {
             if (rec_state == 4) {
@@ -238,26 +255,91 @@ void update_button_states() {
             } else {
                rec_state = 4;
             }
-//            usbMIDI.sendControlChange(7, rec_state, channel);
+            usbMIDI.sendControlChange(7, rec_state, channel);
+            if (debug == true) {
+              Serial.print("update_button_states(cc, rec_state)");
+              print_debug(7, rec_state);
+            }
           }
-          
-//           if ( i == 1 ) {
-//             if (play_state == 0) {
-//                play_state = 1;
-//             } else {
-//                play_state = 0;
-//             }
-//             usbMIDI.sendControlChange(7, play_state, channel);
-//           }
-//
-//           if ( i == 3 ) {
-//             if (loop_state == 2) {
-//                loop_state = 3;
-//             } else {
-//                loop_state = 2;
-//             }
-//             usbMIDI.sendControlChange(7, loop_state, channel);
-//           }
+          if ( i == 1 ) {
+            if (play_state == 0) {
+               play_state = 1;
+            } else {
+               play_state = 0;
+            }
+            usbMIDI.sendControlChange(7, play_state, channel);
+            if (debug == true) {
+              Serial.print("update_button_states(cc, play_state)");
+              print_debug(7, play_state);
+            }
+          }
+
+          if ( i == 2 ) {
+            part_midi_map[part_selection][4] = 7;
+            if (debug == true) {
+              Serial.print("update_button_states(cc, play_state)");
+              print_debug(7, play_state);
+            }
+          }
+
+          if ( i == 3 ) {
+            if (loop_state == 2) {
+              loop_state = 3;
+            } else {
+              loop_state = 2;
+            }
+            usbMIDI.sendControlChange(7, loop_state, channel);
+            if (debug == true) {
+              Serial.print("update_button_states(cc, loop_state)");
+              print_debug(7, loop_state);
+            }
+          }
+
+          if ( i == 4 ) {
+            part_midi_map[part_selection][4] = 1;
+            if (debug == true) {
+              Serial.print("update_button_states(cc, value)");
+              print_debug(1, 4);
+            }
+          }
+
+          if ( i == 5 ) {
+            if (accent_state == 2) {
+              accent_state = 0;
+            } else {
+              accent_state++;
+            }
+            usbMIDI.sendControlChange(2, accent_state, channel);
+            if (debug == true) {
+              Serial.print("update_button_states(cc, accesnt_state)");
+              print_debug(2, accent_state);
+            }
+          }
+
+          if ( i == 6 ) {
+            if (cross_state == 1) {
+              cross_state = 0;
+            } else {
+              cross_state++;
+            }
+            usbMIDI.sendControlChange(3, cross_state, channel);
+            if (debug == true) {
+              Serial.print("update_button_states(cc, cross_state)");
+              print_debug(3, cross_state);
+            }
+          }
+
+          if ( i == 7 ) {
+            part_midi_map[part_selection][4] = 4;
+            swing_on = true;
+            pattern_map = false;
+            if (debug == true) {
+              Serial.print("update_button_states(cc, swing)");
+              print_debug(4, part_midi_state[part_selection][4]);
+            }
+          } else {
+            swing_on = false;
+          }
         }
 
         
@@ -308,19 +390,23 @@ void process_part_buttons(int i) {
   } else if ( i == 1 ) {
     // Accent
     send_cc_when_pressed(12, 1);
+
       
   } else if ( i == 2 ) {
     // FX Edit1
     part_midi_map[part_selection][4] = 13;
+    swing_on = false;
+    pattern_map = false;
     if (debug == true) {
       Serial.print("process_part_buttons(cc, value)");
       print_debug(part_midi_map[part_selection][4], part_midi_state[part_selection][4]);
     }
 
-
   } else if ( i == 3 ) {
     // FX Edit1
     part_midi_map[part_selection][4] = 14;
+    swing_on = false;
+    pattern_map = false;
     if (debug == true) {
       Serial.print("process_part_buttons(cc, value)");
       print_debug(part_midi_map[part_selection][4], part_midi_state[part_selection][4]);
@@ -406,21 +492,36 @@ void update_stick_states() {
 // Which direction is the Joystick pressed?
 void detect_direction(int i, boolean on) {
   if (on == HIGH) {
-  
+
     if (i == 0) {
       stick_direction = 1;
       part_midi_map[part_selection][4] = 10;
+      swing_on = false;
+      pattern_map = false;
     } else if (i == 1) {
-      // Down
+      // Up
       stick_direction = 2;
       part_midi_map[part_selection][4] = 7;
+      swing_on = false;
+      pattern_map = false;
     } else if (i == 2) {
       // Left
       stick_direction = 3;
       part_midi_map[part_selection][4] = 11;
+      swing_on = false;
+      pattern_map = false;
     } else if (i == 3) {
-      // Up
+      // down
       stick_direction = 4;
+
+      // Pattern Set Select
+      part_midi_map[part_selection][4] = 8;
+      swing_on = false;
+      pattern_map = true;
+      if (debug == true) {
+        Serial.print("process_part_buttons(cc, partern)");
+        print_debug(part_midi_map[part_selection][4], part_midi_state[part_selection][4]);
+      }
     }
   } else {
     // Center
@@ -453,6 +554,13 @@ void update_knob_states() {
     knob_state[i] = map(knobs[i].read(), 0, 1024, 0, 128);
     if ( knob_state[i] != knob_prev_state[i] ) {
       part_midi_state[part_selection][i] = knob_state[i];
+      if ( swing_on == true ) {
+        part_midi_state[part_selection][4] = map(knob_state[4], 0, 128, 50, 76);
+      }
+      if ( pattern_map == true ) {
+        part_midi_state[part_selection][4] = map(knob_state[4], 0, 128, 0, 66);
+      }
+
       usbMIDI.sendControlChange(part_midi_map[part_selection][i], part_midi_state[part_selection][i], channel);
 
       if (debug == true) {
