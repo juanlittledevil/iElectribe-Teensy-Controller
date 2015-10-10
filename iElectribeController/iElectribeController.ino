@@ -97,9 +97,18 @@ int led[matrix_size] = {
 boolean is_lit[matrix_size] = {
   LOW, LOW, LOW, LOW,
   LOW, LOW, LOW, LOW,
-  HIGH, LOW, LOW, LOW,
+  LOW, LOW, LOW, LOW,
   LOW, LOW, LOW, LOW
 };
+
+// holds the current state of the led matrix.
+boolean led_fx[4][4] = {
+  {20, 21, 22, 23},
+  {24, 25, 26, 27},
+  {28, 29, 30, 31},
+  {32, 33, 34, 35}
+};
+
 
 // joystick
 int stick_direction = 0;
@@ -364,6 +373,11 @@ void update_button_states() {
           play_notes(play_note[i], LOW);
         }
         is_lit[i] = LOW;
+
+        // Visual Effects.
+        if (stick_direction !=0) {
+          shoot_ray(i);
+        }
       }
     }
   }
@@ -543,6 +557,74 @@ void update_leds() {
       delay(1);
     }
     digitalWrite(led[i], is_lit[i]);
+  }
+}
+
+
+// Visual Effect that shoots a ray in the direction of the stick when a button is pressed.
+// input i: the button number where 0 is the bottom left and 15 is the top right of the matrix.
+void shoot_ray(int i) {
+  int ray_delay = 15;
+  if (stick_direction == 1) {
+    //      RIGHT
+    if (debug == true) {
+      Serial.println("right");
+    }
+    for (int x=0; x < 4; x++) {
+      for (int y=0; y < 4; y++) {
+        if (led_fx[x][y] == led[i]) {
+          for (int a=y; a < 4; a++) {
+            digitalWrite(led_fx[x][a], HIGH);
+            delay(ray_delay);
+            digitalWrite(led_fx[x][a], LOW);
+          }
+        }
+      }
+    }
+
+  } else if (stick_direction ==2) {
+    //      UP
+    if (debug == true) {
+      Serial.println("up");
+    }
+    for (int x=i; x < 16; x = x + 4) {
+      digitalWrite(led[x], HIGH);
+      delay(ray_delay);
+      digitalWrite(led[x], LOW);
+    }
+
+  } else if (stick_direction ==3) {
+    //      LEFT
+    if (debug == true) {
+      Serial.println("left");
+    }
+    for (int x=0; x < 4; x++) {
+      for (int y=0; y < 4; y++) {
+        if (led_fx[x][y] == led[i]) {
+          for (int a=y; a >= 0; a--) {
+            digitalWrite(led_fx[x][a], HIGH);
+            delay(ray_delay);
+            digitalWrite(led_fx[x][a], LOW);
+          }
+        }
+      }
+    }
+
+  } else if (stick_direction ==4) {
+    //      DOWN
+    if (debug == true) {
+      Serial.println("down");
+    }
+    for (int x=i; x >= 0; x = x - 4) {
+      digitalWrite(led[x], HIGH);
+      delay(ray_delay);
+      digitalWrite(led[x], LOW);
+    }
+
+  }
+  if (debug == true) {
+    Serial.print("shoot_ray(stick_direction, button)");
+    print_debug(stick_direction, i);
   }
 }
 
